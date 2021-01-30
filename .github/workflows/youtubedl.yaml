@@ -27,4 +27,4 @@ jobs:
           push: true
           context: .
           file: ./dockerfiles/youtubedl/Dockerfile
-          tags: atomgenie/discord-sound/youtubedl:latest
+          tags: docker.pkg.github.com/atomgenie/discord-sound/youtube-dl:latest
