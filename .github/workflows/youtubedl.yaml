@@ -27,4 +27,4 @@ jobs:
           push: true
           context: .
           file: dockerfiles/youtubedl/Dockerfile
-          tags: ghcr.io/atomgenie/discord-sound/youtube-dl:latest
+          tags: ghcr.io/atomgenie/youtube-dl:latest
