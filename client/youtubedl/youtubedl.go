@@ -57,4 +57,6 @@ func Start() {
 	}
 
 	download("Vald Gotaga")
+
+	select {}
 }
