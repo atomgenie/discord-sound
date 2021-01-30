@@ -20,11 +20,11 @@ jobs:
         with:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          registry: ghcr.io
+          registry: docker.pkg.github.com
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
           push: true
           context: .
           file: dockerfiles/youtubedl/Dockerfile
-          tags: ghcr.io/atomgenie/youtube-dl:latest
+          tags: docker.pkg.github.com/atomgenie/discord-sound/youtube-dl:latest
