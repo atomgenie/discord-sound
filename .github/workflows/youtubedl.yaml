@@ -18,12 +18,12 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          registry: docker.pkg.github.com
+          registry: ghcr.io
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
           push: true
           file: dockerfiles/youtubedl/Dockerfile
-          tags: docker.pkg.github.com/atomgenie/discord-sound/youtube-dl:latest
+          tags: ghcr.io/atomgenie/youtube-dl:latest
