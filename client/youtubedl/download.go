@@ -32,7 +32,11 @@ func download(query string) error {
 	}
 
 	var exists bool
-	redis.Client.Client.Do(context.Background(), radix.Cmd(&exists, "EXISTS", id))
+	err = redis.Client.Client.Do(context.Background(), radix.Cmd(&exists, "EXISTS", id))
+
+	if err != nil {
+		panic(err)
+	}
 
 	if exists {
 		return nil

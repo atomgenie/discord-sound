@@ -21,3 +21,16 @@ spec:
                 - name: REDIS_URL
                   value: {{ .Release.Name }}-redis-master:6379
 
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+    name: bastion
+spec:
+    containers:
+        -
+            image: ubuntu:21.04
+            name: bastion-img
+            command: ["sh", "-c", "tail -f /dev/null"]
