@@ -19,5 +19,5 @@ spec:
               image: {{ .Values.youtubedlImage }}
               env:
                 - name: REDIS_URL
-                  value: {{ .Release.Name }}-redis-master
+                  value: {{ .Release.Name }}-redis-master:6379
 
