@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: youtube-dl
+    labels:
+        name: youtube-dl
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            name: youtube-dl
+    template:
+        metadata:
+            labels:
+                name: youtube-dl
+        spec:
+            containers:
+            - name: youtube-dl
+              image: {{ .Values.youtubedlImage }}
+
