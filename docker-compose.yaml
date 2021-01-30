@@ -1,8 +1,0 @@
-version: "3.0"
-
-services:
-    youtubedl:
-        build:
-            context: .
-            dockerfile: ./dockerfiles/youtubedl/Dockerfile
-        image: localhost:30002/library/youtubedl
