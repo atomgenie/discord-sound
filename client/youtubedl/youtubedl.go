@@ -4,6 +4,7 @@ import (
 	"discord-sound/utils/redis"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"os/exec"
 )
 
@@ -48,7 +49,8 @@ func Start() {
 		panic(err)
 	}
 
-	err = redis.Init("redis")
+	redisURL := os.Getenv("REDIS_URL")
+	err = redis.Init(redisURL)
 
 	if err != nil {
 		panic(err)

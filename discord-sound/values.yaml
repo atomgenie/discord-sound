@@ -1,1 +1,1 @@
-youtubedlImage: harbor/library/youtubedl:latest
+youtubedlImage: ghcr.io/atomgenie/youtube-dl:latest

@@ -17,4 +17,7 @@ spec:
             containers:
             - name: youtube-dl
               image: {{ .Values.youtubedlImage }}
+              env:
+                - name: REDIS_URL
+                  value: {{ .Release.Name }}-redis-master
 
