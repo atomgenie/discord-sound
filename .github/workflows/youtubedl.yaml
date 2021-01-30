@@ -25,6 +25,5 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          context: .
           file: dockerfiles/youtubedl/Dockerfile
           tags: docker.pkg.github.com/atomgenie/discord-sound/youtube-dl:latest
