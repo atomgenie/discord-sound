@@ -1,7 +1,9 @@
 package youtubedl
 
 import (
+	"discord-sound/utils/kafka"
 	"discord-sound/utils/redis"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -56,7 +58,26 @@ func Start() {
 		panic(err)
 	}
 
-	download("Vald Gotaga")
+	kafkaURL := os.Getenv("KAFKA_URL")
+	err = kafka.Init(kafkaURL)
 
-	select {}
+	if err != nil {
+		panic(err)
+	}
+
+	topicURL := os.Getenv("YOUTUBE_DL_TOPIC")
+
+	kafka.Client.Consumer.Subscribe(topicURL, nil)
+
+	defer kafka.Client.Consumer.Close()
+
+	for {
+		msg, err := kafka.Client.Consumer.ReadMessage(-1)
+		if err != nil {
+			fmt.Println("Consumer error", err)
+		} else {
+			download(string(msg.Value))
+		}
+	}
+
 }

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"discord-sound/utils/redis"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -22,6 +24,21 @@ func getID(query string) (string, error) {
 
 	data := out.String()
 	return strings.TrimSuffix(data, "\n"), nil
+}
+
+func handleEndDownload(id string, filename string) error {
+	data, err := ioutil.ReadFile(filename)
+
+	if err != nil {
+		return err
+	}
+
+	err = redis.Client.Client.Do(context.Background(), radix.Cmd(nil, "SETEX", id, "1800", string(data)))
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func download(query string) error {
@@ -51,6 +68,9 @@ func download(query string) error {
 		return err
 	}
 
-	return nil
+	defer os.Remove(filename)
+	err = handleEndDownload(id, filename)
+
+	return err
 
 }
