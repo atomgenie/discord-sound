@@ -5,7 +5,7 @@ metadata:
     labels:
         name: youtube-dl
 spec:
-    replicas: 1
+    replicas: {{ .Values.youtubedl.replicas }}
     selector:
         matchLabels:
             name: youtube-dl
@@ -16,7 +16,7 @@ spec:
         spec:
             containers:
             - name: youtube-dl
-              image: {{ .Values.youtubedlImage }}
+              image: {{ .Values.youtubedl.image }}
               env:
                 - name: REDIS_URL
                   value: {{ .Release.Name }}-redis-master:6379

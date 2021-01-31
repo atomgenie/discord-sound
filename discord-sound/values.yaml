@@ -1,5 +1,12 @@
-youtubedlImage: ghcr.io/atomgenie/youtube-dl:latest
-playerImage: ghcr.io/atomgenie/player
+youtubedl:
+    image: ghcr.io/atomgenie/youtube-dl:latest
+    replicas: 2
+
+player:
+    image: ghcr.io/atomgenie/player
 
 redis:
     usePassword: false
+
+kafka:
+    autoCreateTopicsEnable: true

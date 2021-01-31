@@ -16,7 +16,7 @@ spec:
         spec:
             containers:
             - name: player
-              image: {{ .Values.playerImage }}
+              image: {{ .Values.player.image }}
               env:
                 - name: REDIS_URL
                   value: {{ .Release.Name }}-redis-master:6379
