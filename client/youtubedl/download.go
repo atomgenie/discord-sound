@@ -6,6 +6,7 @@ import (
 	"discord-sound/utils/redis"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -41,14 +42,14 @@ func handleEndDownload(id string, filename string) error {
 	return nil
 }
 
-func download(query string) error {
+func download(query string) (string, error) {
 
 	id, err := getID(query)
 
 	fmt.Println("Downloading", query, id)
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var exists bool
@@ -59,7 +60,7 @@ func download(query string) error {
 	}
 
 	if exists {
-		return nil
+		return "", nil
 	}
 
 	filename := id + ".webm"
@@ -68,12 +69,12 @@ func download(query string) error {
 	err = r.Run()
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	// defer os.Remove(filename)
+	defer os.Remove(filename)
 	err = handleEndDownload(id, filename)
 
-	return err
+	return id, nil
 
 }

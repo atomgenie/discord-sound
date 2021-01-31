@@ -14,10 +14,10 @@ type ClientType struct {
 }
 
 // Init Kafka
-func Init(URL string) error {
+func Init(URL string, groupID string) error {
 	consumer, err := kkafka.NewConsumer(&kkafka.ConfigMap{
 		"bootstrap.servers": URL,
-		"group.id":          "myGroup",
+		"group.id":          groupID,
 		"auto.offset.reset": "earliest",
 	})
 

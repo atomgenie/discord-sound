@@ -3,6 +3,7 @@ package youtubedl
 import (
 	"discord-sound/utils/kafka"
 	"discord-sound/utils/redis"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -59,7 +60,7 @@ func Start() {
 	}
 
 	kafkaURL := os.Getenv("KAFKA_URL")
-	err = kafka.Init(kafkaURL)
+	err = kafka.Init(kafkaURL, "youtubedl")
 
 	if err != nil {
 		panic(err)
@@ -76,7 +77,21 @@ func Start() {
 		if err != nil {
 			fmt.Println("Consumer error", err)
 		} else {
-			download(string(msg.Value))
+
+			var payload kafka.YoutubeDLTopic
+			err := json.Unmarshal(msg.Value, &payload)
+
+			if err != nil {
+				continue
+			}
+
+			_, err = download(payload.Query)
+
+			if err != nil {
+				fmt.Println("Can't download music", err)
+				continue
+			}
+
 		}
 	}
 
