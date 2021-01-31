@@ -1,4 +1,4 @@
-name: YoutubeDL
+name: Player
 
 on:
   push:

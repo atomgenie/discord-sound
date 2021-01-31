@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"discord-sound/utils/redis"
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"strings"
@@ -41,7 +42,10 @@ func handleEndDownload(id string, filename string) error {
 }
 
 func download(query string) error {
+
 	id, err := getID(query)
+
+	fmt.Println("Downloading", query, id)
 
 	if err != nil {
 		return err
