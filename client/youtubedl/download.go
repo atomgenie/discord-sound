@@ -5,7 +5,6 @@ import (
 	"context"
 	"discord-sound/utils/redis"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -68,7 +67,7 @@ func download(query string) error {
 		return err
 	}
 
-	defer os.Remove(filename)
+	// defer os.Remove(filename)
 	err = handleEndDownload(id, filename)
 
 	return err

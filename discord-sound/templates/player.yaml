@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: player
+    labels:
+        name: player
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            name: player
+    template:
+        metadata:
+            labels:
+                name: player
+        spec:
+            containers:
+            - name: player
+              image: {{ .Values.playerImage }}
+              env:
+                - name: REDIS_URL
+                  value: {{ .Release.Name }}-redis-master:6379
+                - name: KAFKA_URL
+                  value: {{ .Release.Name}}-toto-kafka:9092
+                - name: YOUTUBE_DL_TOPIC
+                  value: youtubedl

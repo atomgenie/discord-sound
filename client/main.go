@@ -1,6 +1,7 @@
 package main
 
 import (
+	"discord-sound/player"
 	"discord-sound/youtubedl"
 	"flag"
 )
@@ -19,6 +20,8 @@ func main() {
 	switch args[0] {
 	case "youtubedl":
 		youtubedl.Start()
+	case "player":
+		player.Start()
 	default:
 		flag.Usage()
 		return

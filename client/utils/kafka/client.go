@@ -39,3 +39,9 @@ func Init(URL string) error {
 
 	return nil
 }
+
+// Close Kafka client
+func Close() {
+	Client.Consumer.Close()
+	Client.Producer.Close()
+}

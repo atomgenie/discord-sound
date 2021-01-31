@@ -1,4 +1,5 @@
 youtubedlImage: ghcr.io/atomgenie/youtube-dl:latest
+playerImage: ghcr.io/atomgenie/player
 
 redis:
     usePassword: false

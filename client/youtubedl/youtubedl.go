@@ -69,7 +69,7 @@ func Start() {
 
 	kafka.Client.Consumer.Subscribe(topicURL, nil)
 
-	defer kafka.Client.Consumer.Close()
+	defer kafka.Close()
 
 	for {
 		msg, err := kafka.Client.Consumer.ReadMessage(-1)
