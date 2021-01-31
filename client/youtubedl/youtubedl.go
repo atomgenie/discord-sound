@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+
+	kkafka "github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 func downloadAndInstall() error {
@@ -67,10 +69,13 @@ func Start() {
 	}
 
 	topicURL := os.Getenv("YOUTUBE_DL_TOPIC")
+	topicURLDone := os.Getenv("YOUTUBE_DL_DONE_TOPIC")
 
 	kafka.Client.Consumer.Subscribe(topicURL, nil)
 
 	defer kafka.Close()
+
+	fmt.Println("YoutubeSL Started")
 
 	for {
 		msg, err := kafka.Client.Consumer.ReadMessage(-1)
@@ -85,12 +90,31 @@ func Start() {
 				continue
 			}
 
-			_, err = download(payload.Query)
+			id, err := download(payload.Query)
 
 			if err != nil {
 				fmt.Println("Can't download music", err)
 				continue
 			}
+
+			donePayload := kafka.YoutubeDLDoneTopic{
+				ID:        payload.ID,
+				YoutubeID: id,
+			}
+
+			donePayloadStr, err := json.Marshal(donePayload)
+
+			if err != nil {
+				continue
+			}
+
+			kafka.Client.Producer.Produce(&kkafka.Message{
+				TopicPartition: kkafka.TopicPartition{
+					Topic:     &topicURLDone,
+					Partition: kkafka.PartitionAny,
+				},
+				Value: donePayloadStr,
+			}, nil)
 
 		}
 	}

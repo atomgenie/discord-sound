@@ -24,3 +24,5 @@ spec:
                   value: {{ .Release.Name}}-kafka:9092
                 - name: YOUTUBE_DL_TOPIC
                   value: youtubedl
+                - name: YOUTUBE_DL_DONE_TOPIC
+                  value: youtubedl_done

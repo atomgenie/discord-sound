@@ -60,7 +60,7 @@ func download(query string) (string, error) {
 	}
 
 	if exists {
-		return "", nil
+		return id, nil
 	}
 
 	filename := id + ".webm"
