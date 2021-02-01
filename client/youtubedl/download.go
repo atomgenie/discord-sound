@@ -63,9 +63,9 @@ func download(query string) (string, error) {
 		return id, nil
 	}
 
-	filename := id + ".webm"
+	filename := id + ".opus"
 
-	r := exec.Command("./youtube-dl", "--format", "bestaudio[ext=webm]", "-o", filename, id)
+	r := exec.Command("./youtube-dl", "--format", "bestaudio", "--extract-audio", "--audio-format", "opus", "-o", filename, id)
 	err = r.Run()
 
 	if err != nil {
@@ -73,7 +73,19 @@ func download(query string) (string, error) {
 	}
 
 	defer os.Remove(filename)
-	err = handleEndDownload(id, filename)
+
+	filenamePCM := id + ".pcm"
+
+	r = exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar", "48000", "-ac", "2", "-y", filenamePCM)
+	err = r.Run()
+
+	if err != nil {
+		return "", nil
+	}
+
+	defer os.Remove(filenamePCM)
+
+	err = handleEndDownload(id, filenamePCM)
 
 	return id, nil
 

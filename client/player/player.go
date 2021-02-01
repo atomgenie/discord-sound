@@ -1,13 +1,14 @@
 package player
 
 import (
+	"discord-sound/player/requests"
+	"discord-sound/player/server"
+	"discord-sound/utils/discord"
 	"discord-sound/utils/kafka"
+	"discord-sound/utils/redis"
 	"discord-sound/utils/uuid"
-	"encoding/json"
 	"fmt"
 	"os"
-
-	kkafka "github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 // Start player
@@ -19,21 +20,32 @@ func Start() {
 		panic(err)
 	}
 
-	defer kafka.Close()
+	redisURL := os.Getenv("REDIS_URL")
+	err = redis.Init(redisURL)
 
-	topicURL := os.Getenv("YOUTUBE_DL_TOPIC")
-
-	payload := kafka.YoutubeDLTopic{
-		ID:    uuid.Gen(),
-		Query: "Vald Gotaga",
+	if err != nil {
+		panic(err)
 	}
 
-	payloadStr, _ := json.Marshal(payload)
+	defer kafka.Close()
 
-	kafka.Client.Producer.Produce(&kkafka.Message{
-		TopicPartition: kkafka.TopicPartition{Topic: &topicURL, Partition: kkafka.PartitionAny},
-		Value:          payloadStr,
-	}, nil)
+	discordToken := os.Getenv("DISCORD_TOKEN")
+	err = discord.Init(discordToken)
+
+	if err != nil {
+		panic(err)
+	}
+
+	requests.StartDone()
+
+	discord.Client.Client.AddHandler(server.HandleMessage)
+	err = discord.Open()
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer discord.Close()
 
 	fmt.Println("Player Started")
 

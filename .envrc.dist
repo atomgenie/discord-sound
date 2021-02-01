@@ -2,3 +2,4 @@ export REDIS_URL=localhost:6379
 export KAFKA_URL=localhost:9092
 export YOUTUBE_DL_TOPIC=youtubedl
 export YOUTUBE_DL_DONE_TOPIC=youtubedl_done
+export DISCORD_TOKEN=<your_token>
