@@ -38,5 +38,11 @@ func RequestSong(query string, requestID string, server *Instance) error {
 	}, nil)
 
 	return nil
+}
 
+// CancelRequest Cancel request
+func CancelRequest(requestID string) {
+	requestMux.Lock()
+	requestMap[requestID] = request{}
+	requestMux.Unlock()
 }

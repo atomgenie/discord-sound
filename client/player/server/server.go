@@ -61,8 +61,6 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if strings.HasPrefix(m.Content, "!!") {
 
-		fmt.Println(actualGuild.playing)
-
 		if actualGuild.playing {
 			return
 		}
@@ -91,6 +89,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 			soundKey = key
 		case <-time.After(30 * time.Second):
 			fmt.Println("Timeout")
+			requests.CancelRequest(requestID)
 			return
 		}
 
