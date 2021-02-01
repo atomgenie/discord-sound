@@ -35,10 +35,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	actualGuild := guilds.Map[guild.ID]
 
 	if actualGuild == nil {
-		guildInstance := new(guilds.Type)
-		guildInstance.ID = guild.ID
-		guildInstance.Playing = false
-		guildInstance.Queue = make([]string, 0)
+		guildInstance := guilds.New(guild.ID)
 		guilds.Map[guild.ID] = guildInstance
 		actualGuild = guildInstance
 	}
@@ -52,9 +49,14 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		if strings.HasPrefix(firstArgs, "play") {
 			args := firstArgs[5:]
-
 			commands.HandlePlay(s, m, args, actualGuild)
+		} else if strings.HasPrefix(firstArgs, "skip") {
+			commands.HandleSkip(actualGuild)
+		} else if strings.HasPrefix(firstArgs, "pause") {
+			commands.HandlePause(actualGuild)
+		} else if strings.HasPrefix(firstArgs, "resume") {
+			commands.HandleResume(actualGuild)
 		}
-
 	}
+
 }
