@@ -3,11 +3,13 @@ package youtubedl
 import (
 	"bytes"
 	"context"
+	"discord-sound/utils/opusconfig"
 	"discord-sound/utils/redis"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/mediocregopher/radix/v4"
@@ -65,7 +67,7 @@ func download(query string) (string, error) {
 
 	filename := id + ".opus"
 
-	r := exec.Command("./youtube-dl", "--format", "bestaudio", "--extract-audio", "--audio-format", "opus", "-o", filename, id)
+	r := exec.Command("./youtube-dl", "--format", "best", "--extract-audio", "--audio-quality", "0", "--audio-format", "opus", "-o", filename, id)
 	err = r.Run()
 
 	if err != nil {
@@ -76,7 +78,7 @@ func download(query string) (string, error) {
 
 	filenamePCM := id + ".pcm"
 
-	r = exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar", "48000", "-ac", "2", "-y", filenamePCM)
+	r = exec.Command("ffmpeg", "-i", filename, "-f", "s16le", "-ar", strconv.Itoa(opusconfig.FrameRateConst), "-ac", strconv.Itoa(opusconfig.ChannelsConst), "-y", filenamePCM)
 	err = r.Run()
 
 	if err != nil {

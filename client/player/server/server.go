@@ -1,30 +1,15 @@
 package server
 
 import (
-	"bytes"
-	"context"
-	"discord-sound/player/requests"
-	"discord-sound/utils/redis"
-	"discord-sound/utils/uuid"
-	"encoding/binary"
+	"discord-sound/player/server/commands"
+	"discord-sound/player/server/guilds"
 	"fmt"
-	"io"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/mediocregopher/radix/v4"
-	"gopkg.in/hraban/opus.v2"
 )
 
-type guildType struct {
-	id      string
-	playing bool
-}
-
-var guilds map[string]*guildType = make(map[string]*guildType)
-var guildMux sync.Mutex
+const command = "!!"
 
 // HandleMessage Handler for message
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -45,162 +30,31 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	guildMux.Lock()
+	guilds.Mux.Lock()
 
-	actualGuild := guilds[guild.ID]
+	actualGuild := guilds.Map[guild.ID]
 
 	if actualGuild == nil {
-		guildInstance := new(guildType)
-		guildInstance.id = guild.ID
-		guildInstance.playing = false
-		guilds[guild.ID] = guildInstance
+		guildInstance := new(guilds.Type)
+		guildInstance.ID = guild.ID
+		guildInstance.Playing = false
+		guildInstance.Queue = make([]string, 0)
+		guilds.Map[guild.ID] = guildInstance
 		actualGuild = guildInstance
 	}
 
-	guildMux.Unlock()
+	guilds.Mux.Unlock()
 
-	if strings.HasPrefix(m.Content, "!!") {
+	if strings.HasPrefix(m.Content, command) {
+		firstArgs := m.Content[len(command):]
 
-		if actualGuild.playing {
-			return
-		}
+		fmt.Println("Command", firstArgs)
 
-		actualGuild.playing = true
+		if strings.HasPrefix(firstArgs, "play") {
+			args := firstArgs[5:]
 
-		defer func() { actualGuild.playing = false }()
-
-		instance := new(requests.Instance)
-		instance.DoneChan = make(chan string)
-
-		var soundKey string
-
-		requestID := uuid.Gen()
-
-		querySound := m.Content[3:]
-
-		err = requests.RequestSong(querySound, requestID, instance)
-
-		if err != nil {
-			return
-		}
-
-		select {
-		case key := <-instance.DoneChan:
-			soundKey = key
-		case <-time.After(30 * time.Second):
-			fmt.Println("Timeout")
-			requests.CancelRequest(requestID)
-			return
-		}
-
-		for _, voice := range guild.VoiceStates {
-			if voice.UserID == m.Message.Author.ID {
-				err = playSound(s, guild.ID, voice.ChannelID, soundKey)
-
-				if err != nil {
-					return
-				}
-
-				break
-			}
+			commands.HandlePlay(s, m, args, actualGuild)
 		}
 
 	}
-}
-
-const (
-	channelsConst  int = 2
-	frameRateConst int = 48000
-	frameSizeConst int = 960
-	maxBytesConst  int = (frameSizeConst * 2) * 2
-)
-
-func convertSong(sound []byte) (*[][]byte, error) {
-
-	buffer := make([][]int16, 0)
-	soundStream := bytes.NewReader(sound)
-
-	for {
-		pcmBuf := make([]int16, frameSizeConst*channelsConst)
-		err := binary.Read(soundStream, binary.LittleEndian, &pcmBuf)
-
-		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			break
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		buffer = append(buffer, pcmBuf)
-	}
-
-	encoder, err := opus.NewEncoder(frameRateConst, channelsConst, opus.AppAudio)
-
-	if err != nil {
-		return nil, err
-	}
-
-	opusFinalBuf := make([][]byte, 0)
-
-	for _, pcm := range buffer {
-
-		opusBuf := make([]byte, maxBytesConst)
-		n, err := encoder.Encode(pcm, opusBuf)
-
-		if err != nil {
-			return nil, err
-		}
-
-		opusFinalBuf = append(opusFinalBuf, opusBuf[:n])
-	}
-
-	return &opusFinalBuf, nil
-
-}
-
-func loadSound(soundID string) (*[][]byte, error) {
-
-	var rawData []byte = nil
-
-	err := redis.Client.Client.Do(context.Background(), radix.Cmd(&rawData, "GET", soundID))
-
-	if err != nil {
-		return nil, err
-	}
-
-	if rawData == nil {
-		return nil, fmt.Errorf("Redis error")
-	}
-
-	return convertSong(rawData)
-}
-
-func playSound(s *discordgo.Session, guildID string, channelID string, soundID string) error {
-
-	data, err := loadSound(soundID)
-
-	if err != nil {
-		fmt.Println("Sound", err)
-		return err
-	}
-
-	voiceChannel, err := s.ChannelVoiceJoin(guildID, channelID, false, true)
-
-	if err != nil {
-		return err
-	}
-
-	voiceChannel.Speaking(true)
-
-	for _, buff := range *data {
-		voiceChannel.OpusSend <- buff
-	}
-
-	fmt.Println("Done")
-
-	voiceChannel.Speaking(false)
-	voiceChannel.Disconnect()
-
-	return nil
 }
