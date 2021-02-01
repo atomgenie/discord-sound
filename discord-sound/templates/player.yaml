@@ -27,4 +27,4 @@ spec:
                 - name: YOUTUBE_DL_DONE_TOPIC
                   value: youtubedl_done
                 - name: DISCORD_TOKEN
-                  value: {{ .Values.DISCORD_TOKEN }}
+                  value: {{ required "DISCORD_TOKEN" .Values.DISCORD_TOKEN }}

@@ -10,12 +10,21 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/mediocregopher/radix/v4"
 	"gopkg.in/hraban/opus.v2"
 )
+
+type guildType struct {
+	id      string
+	playing bool
+}
+
+var guilds map[string]*guildType = make(map[string]*guildType)
+var guildMux sync.Mutex
 
 // HandleMessage Handler for message
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -24,7 +33,43 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	channel, err := s.State.Channel(m.ChannelID)
+
+	if err != nil {
+		return
+	}
+
+	guild, err := s.State.Guild(channel.GuildID)
+
+	if err != nil {
+		return
+	}
+
+	guildMux.Lock()
+
+	actualGuild := guilds[guild.ID]
+
+	if actualGuild == nil {
+		guildInstance := new(guildType)
+		guildInstance.id = guild.ID
+		guildInstance.playing = false
+		guilds[guild.ID] = guildInstance
+		actualGuild = guildInstance
+	}
+
+	guildMux.Unlock()
+
 	if strings.HasPrefix(m.Content, "!!") {
+
+		fmt.Println(actualGuild.playing)
+
+		if actualGuild.playing {
+			return
+		}
+
+		actualGuild.playing = true
+
+		defer func() { actualGuild.playing = false }()
 
 		instance := new(requests.Instance)
 		instance.DoneChan = make(chan string)
@@ -35,7 +80,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		querySound := m.Content[3:]
 
-		err := requests.RequestSong(querySound, requestID, instance)
+		err = requests.RequestSong(querySound, requestID, instance)
 
 		if err != nil {
 			return
@@ -46,18 +91,6 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 			soundKey = key
 		case <-time.After(30 * time.Second):
 			fmt.Println("Timeout")
-			return
-		}
-
-		channel, err := s.State.Channel(m.ChannelID)
-
-		if err != nil {
-			return
-		}
-
-		guild, err := s.State.Guild(channel.GuildID)
-
-		if err != nil {
 			return
 		}
 
