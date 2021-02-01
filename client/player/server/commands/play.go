@@ -22,6 +22,10 @@ import (
 // HandlePlay Handle play command
 func HandlePlay(s *discordgo.Session, m *discordgo.MessageCreate, argument string, guild *guilds.Type) {
 
+	if argument == "" {
+		return
+	}
+
 	playing := guild.GetPlaying()
 
 	if !playing {
