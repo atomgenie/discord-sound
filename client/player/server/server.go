@@ -135,7 +135,7 @@ func convertSong(sound []byte) (*[][]byte, error) {
 		buffer = append(buffer, pcmBuf)
 	}
 
-	encoder, err := opus.NewEncoder(frameRateConst, channelsConst, opus.AppVoIP)
+	encoder, err := opus.NewEncoder(frameRateConst, channelsConst, opus.AppAudio)
 
 	if err != nil {
 		return nil, err
