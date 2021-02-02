@@ -9,14 +9,28 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/mediocregopher/radix/v4"
 )
 
+const (
+	matchHTTP = `^https?:\/\/(www.)?(youtube.com)|(youtu.be)\/.*$`
+)
+
 func getID(query string) (string, error) {
-	r := exec.Command("./youtube-dl", "--get-id", "ytsearch:"+query)
+
+	var rawQuery string
+
+	if valid, _ := regexp.MatchString(matchHTTP, query); valid {
+		rawQuery = query
+	} else {
+		rawQuery = "ytsearch:" + query
+	}
+
+	r := exec.Command("./youtube-dl", "--get-id", rawQuery)
 	var out bytes.Buffer
 	r.Stdout = &out
 	err := r.Run()
