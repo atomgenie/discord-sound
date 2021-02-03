@@ -90,7 +90,7 @@ func Start() {
 				continue
 			}
 
-			id, err := download(payload.Query)
+			id, name, err := download(payload.Query)
 
 			if err != nil {
 				fmt.Println("Can't download music", err)
@@ -98,8 +98,9 @@ func Start() {
 			}
 
 			donePayload := kafka.YoutubeDLDoneTopic{
-				ID:        payload.ID,
-				YoutubeID: id,
+				ID:         payload.ID,
+				MusicTitle: name,
+				YoutubeID:  id,
 			}
 
 			donePayloadStr, err := json.Marshal(donePayload)

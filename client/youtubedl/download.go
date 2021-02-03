@@ -43,6 +43,20 @@ func getID(query string) (string, error) {
 	return strings.TrimSuffix(data, "\n"), nil
 }
 
+func getTitle(youtubeID string) (string, error) {
+	r := exec.Command("./youtube-dl", "--get-title", youtubeID)
+	var out bytes.Buffer
+	r.Stdout = &out
+	err := r.Run()
+
+	if err != nil {
+		return "", err
+	}
+
+	data := out.String()
+	return strings.TrimSuffix(data, "\n"), nil
+}
+
 func handleEndDownload(id string, filename string) error {
 	data, err := ioutil.ReadFile(filename)
 
@@ -58,15 +72,21 @@ func handleEndDownload(id string, filename string) error {
 	return nil
 }
 
-func download(query string) (string, error) {
+func download(query string) (string, string, error) {
 
 	id, err := getID(query)
 
-	fmt.Println("Downloading", query, id)
+	if err != nil {
+		return "", "", err
+	}
+
+	name, err := getTitle(id)
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
+
+	fmt.Println("Downloading", query, name, id)
 
 	var exists bool
 	err = redis.Client.Client.Do(context.Background(), radix.Cmd(&exists, "EXISTS", id))
@@ -76,7 +96,7 @@ func download(query string) (string, error) {
 	}
 
 	if exists {
-		return id, nil
+		return id, name, nil
 	}
 
 	filename := id + ".opus"
@@ -85,7 +105,7 @@ func download(query string) (string, error) {
 	err = r.Run()
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	defer os.Remove(filename)
@@ -96,13 +116,13 @@ func download(query string) (string, error) {
 	err = r.Run()
 
 	if err != nil {
-		return "", nil
+		return "", "", nil
 	}
 
 	defer os.Remove(filenamePCM)
 
 	err = handleEndDownload(id, filenamePCM)
 
-	return id, nil
+	return id, name, nil
 
 }

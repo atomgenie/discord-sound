@@ -7,22 +7,31 @@ import (
 	"os"
 )
 
-// Instance Instance of a server
-type Instance struct {
-	DoneChan chan string
+type DoneStruct struct {
+	YoutubeID    string
+	YoutubeTitle string
 }
 
-func handleDone(ID string, youtubeID string) {
+// Instance Instance of a server
+type Instance struct {
+	DoneChan chan DoneStruct
+}
+
+func handleDone(ID string, youtubeID string, youtubeTitle string) {
 
 	requestMux.Lock()
-	defer requestMux.Unlock()
 	targetRequest := requestMap[ID]
+	requestMux.Unlock()
 
 	if targetRequest.Server == nil {
 		return
 	}
 
-	targetRequest.Server.DoneChan <- youtubeID
+	targetRequest.Server.DoneChan <- DoneStruct{
+		YoutubeID:    youtubeID,
+		YoutubeTitle: youtubeTitle,
+	}
+
 	requestMap[ID] = request{}
 }
 
@@ -47,7 +56,7 @@ func handleDoneRequests() {
 			continue
 		}
 
-		handleDone(payload.ID, payload.YoutubeID)
+		handleDone(payload.ID, payload.YoutubeID, payload.MusicTitle)
 	}
 }
 

@@ -10,6 +10,7 @@ type YoutubeDLTopic struct {
 // YoutubeDLDoneTopic Topic
 type YoutubeDLDoneTopic struct {
 	// ID id of message
-	ID        string `json:"id"`
-	YoutubeID string `json:"youtubeId"`
+	ID         string `json:"id"`
+	YoutubeID  string `json:"youtubeId"`
+	MusicTitle string `json:"musicTitle"`
 }

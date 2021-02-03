@@ -56,6 +56,8 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 			commands.HandlePause(actualGuild)
 		} else if strings.HasPrefix(firstArgs, "resume") {
 			commands.HandleResume(actualGuild)
+		} else if strings.HasPrefix(firstArgs, "queue") {
+			commands.HandleQueue(actualGuild, m.ChannelID, s)
 		}
 	}
 

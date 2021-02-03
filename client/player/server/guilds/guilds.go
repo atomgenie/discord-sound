@@ -21,6 +21,8 @@ type Type struct {
 	Skip           chan int
 	PauseChan      chan int
 	ResumeChan     chan int
+	StopChan       chan int
+	NowPlaying     string
 }
 
 // Map Guilds maps
@@ -39,6 +41,8 @@ func New(guildID string) *Type {
 	guildInstance.Skip = make(chan int)
 	guildInstance.PauseChan = make(chan int)
 	guildInstance.ResumeChan = make(chan int)
+	guildInstance.StopChan = make(chan int)
+
 	return guildInstance
 }
 
@@ -58,4 +62,21 @@ func (g *Type) GetPause() bool {
 	g.Mux.Unlock()
 
 	return pause
+}
+
+// GetQueue Get queue
+func (g *Type) GetQueue() []QueueType {
+	g.Mux.Lock()
+	queue := g.Queue
+	g.Mux.Unlock()
+	return queue
+}
+
+// GetNowPlaying Get now playing
+func (g *Type) GetNowPlaying() string {
+	g.Mux.Lock()
+	nowPlaying := g.NowPlaying
+	g.Mux.Unlock()
+
+	return nowPlaying
 }
