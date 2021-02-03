@@ -119,7 +119,6 @@ func Start() {
 			}, nil)
 
 			runtime.GC()
-
 		}
 	}
 

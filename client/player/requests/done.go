@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 )
 
+// DoneStruct done
 type DoneStruct struct {
 	YoutubeID    string
 	YoutubeTitle string
@@ -27,9 +29,15 @@ func handleDone(ID string, youtubeID string, youtubeTitle string) {
 		return
 	}
 
-	targetRequest.Server.DoneChan <- DoneStruct{
+	select {
+
+	case targetRequest.Server.DoneChan <- DoneStruct{
 		YoutubeID:    youtubeID,
 		YoutubeTitle: youtubeTitle,
+	}:
+		break
+	case <-time.After(10 * time.Second):
+		break
 	}
 
 	requestMap[ID] = request{}
