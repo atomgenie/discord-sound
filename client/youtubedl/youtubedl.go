@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 
 	kkafka "github.com/confluentinc/confluent-kafka-go/kafka"
 )
@@ -116,6 +117,8 @@ func Start() {
 				},
 				Value: donePayloadStr,
 			}, nil)
+
+			runtime.GC()
 
 		}
 	}
