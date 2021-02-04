@@ -1,6 +1,6 @@
 youtubedl:
     image: ghcr.io/atomgenie/youtube-dl:latest
-    replicas: 2
+    replicas: 1
 
 player:
     image: ghcr.io/atomgenie/player
@@ -12,4 +12,4 @@ redis:
 
 kafka:
     autoCreateTopicsEnable: true
-    replicaCount: 2
+    replicaCount: 1
