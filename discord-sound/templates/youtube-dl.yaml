@@ -26,16 +26,3 @@ spec:
                   value: youtubedl
                 - name: YOUTUBE_DL_DONE_TOPIC
                   value: youtubedl_done
-
----
-
-apiVersion: v1
-kind: Pod
-metadata:
-    name: bastion
-spec:
-    containers:
-        -
-            image: ubuntu:21.04
-            name: bastion-img
-            command: ["sh", "-c", "tail -f /dev/null"]
