@@ -48,6 +48,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		fmt.Println("Command", firstArgs)
 
 		if strings.HasPrefix(firstArgs, "play") {
+			s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
 			args := firstArgs[5:]
 			commands.HandlePlay(s, m, args, actualGuild)
 		} else if strings.HasPrefix(firstArgs, "skip") {
@@ -55,9 +56,10 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		} else if strings.HasPrefix(firstArgs, "pause") {
 			commands.HandlePause(actualGuild)
 		} else if strings.HasPrefix(firstArgs, "resume") {
-			commands.HandleResume(actualGuild)
+			commands.HandleResume(actualGuild, m)
 		} else if strings.HasPrefix(firstArgs, "queue") {
 			commands.HandleQueue(actualGuild, m.ChannelID, s)
+		} else {
 		}
 	}
 

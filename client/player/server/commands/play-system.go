@@ -5,6 +5,7 @@ import (
 	"context"
 	"discord-sound/player/requests"
 	"discord-sound/player/server/guilds"
+	"discord-sound/utils/discord"
 	"discord-sound/utils/opusconfig"
 	"discord-sound/utils/redis"
 	"discord-sound/utils/uuid"
@@ -61,7 +62,7 @@ func startQueue(session *discordgo.Session, guild *guilds.Type) {
 		guild.Queue = guild.Queue[1:]
 		guild.Mux.Unlock()
 
-		playSound(voiceChannel, guild.ID, guild.SoundChannelID, querySound, guild, preload)
+		playSound(session, voiceChannel, guild.ID, guild.SoundChannelID, querySound, guild, preload)
 
 	}
 
@@ -213,7 +214,7 @@ func loadSound(soundID string) (*[][]byte, error) {
 	return convertSong(rawData)
 }
 
-func playSound(voiceChannel *discordgo.VoiceConnection, guildID string, channelID string, query guilds.QueueType, guild *guilds.Type, preload *preload) error {
+func playSound(s *discordgo.Session, voiceChannel *discordgo.VoiceConnection, guildID string, channelID string, query guilds.QueueType, guild *guilds.Type, preload *preload) error {
 
 	var data *[][]byte = nil
 	var soundName string
@@ -264,7 +265,7 @@ func playSound(voiceChannel *discordgo.VoiceConnection, guildID string, channelI
 			case <-guild.Skip:
 				return nil
 			case <-guild.PauseChan:
-				continueMusic := handlePauseMusic(guild)
+				continueMusic := handlePauseMusic(s, &voiceChannel, guild)
 
 				if continueMusic {
 					break
@@ -281,7 +282,11 @@ func playSound(voiceChannel *discordgo.VoiceConnection, guildID string, channelI
 		case voiceChannel.OpusSend <- buff:
 			break
 		case <-time.After(5 * time.Second):
-			return nil
+			continueMusic := handlePauseMusic(s, &voiceChannel, guild)
+
+			if !continueMusic {
+				return nil
+			}
 		}
 	}
 
@@ -290,12 +295,34 @@ func playSound(voiceChannel *discordgo.VoiceConnection, guildID string, channelI
 	return nil
 }
 
-func handlePauseMusic(guild *guilds.Type) bool {
+func handlePauseMusic(s *discordgo.Session, voiceChannel **discordgo.VoiceConnection, guild *guilds.Type) bool {
 	guild.Mux.Lock()
 	guild.Pause = true
 	guild.Mux.Unlock()
 	select {
-	case <-guild.ResumeChan:
+	case payload := <-guild.ResumeChan:
+
+		select {
+		case (*voiceChannel).OpusSend <- make([]byte, 0):
+			break
+		case <-time.After(1 * time.Second):
+			newVoiceChannelID, err := discord.GetVoiceChannel(s, payload.Message, guild.ID)
+
+			if err != nil {
+				break
+			}
+
+			(*voiceChannel).Disconnect()
+			newVoiceChannel, err := s.ChannelVoiceJoin(guild.ID, newVoiceChannelID, false, true)
+
+			if err != nil {
+				break
+			}
+
+			guild.SoundChannelID = newVoiceChannelID
+			*voiceChannel = newVoiceChannel
+		}
+
 		guild.Mux.Lock()
 		guild.Pause = false
 		guild.Mux.Unlock()

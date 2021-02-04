@@ -2,12 +2,18 @@ package guilds
 
 import (
 	"sync"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 // QueueType queue type
 type QueueType struct {
 	Query string
 	UUID  string
+}
+
+type ResumePayload struct {
+	Message *discordgo.MessageCreate
 }
 
 // Type Guild type
@@ -20,7 +26,7 @@ type Type struct {
 	SoundChannelID string
 	Skip           chan int
 	PauseChan      chan int
-	ResumeChan     chan int
+	ResumeChan     chan ResumePayload
 	StopChan       chan int
 	NowPlaying     string
 }
@@ -40,7 +46,7 @@ func New(guildID string) *Type {
 	guildInstance.Queue = make([]QueueType, 0)
 	guildInstance.Skip = make(chan int)
 	guildInstance.PauseChan = make(chan int)
-	guildInstance.ResumeChan = make(chan int)
+	guildInstance.ResumeChan = make(chan ResumePayload)
 	guildInstance.StopChan = make(chan int)
 
 	return guildInstance

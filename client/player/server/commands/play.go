@@ -2,6 +2,7 @@ package commands
 
 import (
 	"discord-sound/player/server/guilds"
+	"discord-sound/utils/discord"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -16,22 +17,10 @@ func HandlePlay(s *discordgo.Session, m *discordgo.MessageCreate, argument strin
 	playing := guild.GetPlaying()
 
 	if !playing {
-		g, err := s.State.Guild(guild.ID)
+
+		voiceID, err := discord.GetVoiceChannel(s, m, guild.ID)
 
 		if err != nil {
-			return
-		}
-
-		var voiceID string = ""
-
-		for _, voice := range g.VoiceStates {
-			if voice.UserID == m.Message.Author.ID {
-				voiceID = voice.ChannelID
-				break
-			}
-		}
-
-		if voiceID == "" {
 			return
 		}
 
