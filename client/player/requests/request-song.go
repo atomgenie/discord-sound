@@ -1,11 +1,12 @@
 package requests
 
 import (
-	"discord-sound/utils/kafka"
+	"context"
+	"discord-sound/utils/redis"
 	"encoding/json"
 	"os"
 
-	kkafka "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/mediocregopher/radix/v4"
 )
 
 // RequestSong Request for a song
@@ -13,7 +14,7 @@ func RequestSong(query string, requestID string, server *Instance) error {
 
 	topicURL := os.Getenv("YOUTUBE_DL_TOPIC")
 
-	payload := kafka.YoutubeDLTopic{
+	payload := redis.YoutubeDLTopic{
 		ID:    requestID,
 		Query: query,
 	}
@@ -30,14 +31,9 @@ func RequestSong(query string, requestID string, server *Instance) error {
 	}
 	requestMux.Unlock()
 
-	kafka.Client.Producer.Produce(&kkafka.Message{
-		Value: payloadString,
-		TopicPartition: kkafka.TopicPartition{
-			Topic: &topicURL,
-		},
-	}, nil)
+	err = redis.Client.Client.Do(context.Background(), radix.Cmd(nil, "LPUSH", topicURL, string(payloadString)))
 
-	return nil
+	return err
 }
 
 // CancelRequest Cancel request

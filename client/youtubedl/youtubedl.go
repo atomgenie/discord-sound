@@ -1,7 +1,7 @@
 package youtubedl
 
 import (
-	"discord-sound/utils/kafka"
+	"context"
 	"discord-sound/utils/redis"
 	"encoding/json"
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	kkafka "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/mediocregopher/radix/v4"
 )
 
 func downloadAndInstall() error {
@@ -62,30 +62,28 @@ func Start() {
 		panic(err)
 	}
 
-	kafkaURL := os.Getenv("KAFKA_URL")
-	err = kafka.Init(kafkaURL, "youtubedl")
-
-	if err != nil {
-		panic(err)
-	}
-
 	topicURL := os.Getenv("YOUTUBE_DL_TOPIC")
 	topicURLDone := os.Getenv("YOUTUBE_DL_DONE_TOPIC")
 
-	kafka.Client.Consumer.Subscribe(topicURL, nil)
+	// sub, pubChan := radix.NewPubSubStubConn("tcp", redisURL, func(c context.Context, s []string) interface{} {
+	// 	fmt.Println(s)
+	// 	return nil
+	// })
 
-	defer kafka.Close()
+	// defer sub.Close()
 
 	fmt.Println("YoutubeSL Started")
 
+	var rawMessage []string
+
 	for {
-		msg, err := kafka.Client.Consumer.ReadMessage(-1)
+		err = redis.Client.Client.Do(context.Background(), radix.Cmd(&rawMessage, "BRPOP", topicURL, "0"))
 		if err != nil {
 			fmt.Println("Consumer error", err)
 		} else {
 
-			var payload kafka.YoutubeDLTopic
-			err := json.Unmarshal(msg.Value, &payload)
+			var payload redis.YoutubeDLTopic
+			err = json.Unmarshal([]byte(rawMessage[1]), &payload)
 
 			if err != nil {
 				continue
@@ -98,7 +96,7 @@ func Start() {
 				continue
 			}
 
-			donePayload := kafka.YoutubeDLDoneTopic{
+			donePayload := redis.YoutubeDLDoneTopic{
 				ID:         payload.ID,
 				MusicTitle: name,
 				YoutubeID:  id,
@@ -110,14 +108,7 @@ func Start() {
 				continue
 			}
 
-			kafka.Client.Producer.Produce(&kkafka.Message{
-				TopicPartition: kkafka.TopicPartition{
-					Topic:     &topicURLDone,
-					Partition: kkafka.PartitionAny,
-				},
-				Value: donePayloadStr,
-			}, nil)
-
+			redis.Client.Client.Do(context.Background(), radix.Cmd(nil, "PUBLISH", topicURLDone, string(donePayloadStr)))
 			runtime.GC()
 		}
 	}

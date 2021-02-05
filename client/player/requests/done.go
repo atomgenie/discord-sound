@@ -1,11 +1,13 @@
 package requests
 
 import (
-	"discord-sound/utils/kafka"
+	"context"
+	"discord-sound/utils/redis"
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
+
+	"github.com/mediocregopher/radix/v4"
 )
 
 // DoneStruct done
@@ -44,21 +46,30 @@ func handleDone(ID string, youtubeID string, youtubeTitle string) {
 }
 
 func handleDoneRequests() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	topicURLDone := os.Getenv("YOUTUBE_DL_DONE_TOPIC")
-	kafka.Client.Consumer.Subscribe(topicURLDone, nil)
-	defer kafka.Close()
+	redisURL := os.Getenv("REDIS_URL")
+
+	conn, err := radix.Dial(context.Background(), "tcp", redisURL)
+
+	if err != nil {
+		panic(err)
+	}
+
+	subRedis := (radix.PubSubConfig{}).New(conn)
+	chanSub := make(chan radix.PubSubMessage)
+
+	if err := subRedis.Subscribe(ctx, chanSub, topicURLDone); err != nil {
+		panic(err)
+	}
 
 	for {
-		msg, err := kafka.Client.Consumer.ReadMessage(-1)
+		msg := <-chanSub
 
-		if err != nil {
-			fmt.Println("Consumer error", err)
-			continue
-		}
-
-		var payload kafka.YoutubeDLDoneTopic
-		err = json.Unmarshal(msg.Value, &payload)
+		var payload redis.YoutubeDLDoneTopic
+		err := json.Unmarshal(msg.Message, &payload)
 
 		if err != nil {
 			continue

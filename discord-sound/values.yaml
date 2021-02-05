@@ -9,7 +9,3 @@ redis:
     usePassword: false
     cluster:
         slaveCount: 2
-
-kafka:
-    autoCreateTopicsEnable: true
-    replicaCount: 1

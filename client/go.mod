@@ -7,5 +7,6 @@ require (
 	github.com/confluentinc/confluent-kafka-go v1.5.2
 	github.com/google/uuid v1.2.0
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
+	github.com/zeromq/goczmq v4.1.0+incompatible // indirect
 	gopkg.in/hraban/opus.v2 v2.0.0-20201025103112-d779bb1cc5a2
 )

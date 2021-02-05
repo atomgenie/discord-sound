@@ -22,9 +22,6 @@ version: 0.1.0
 # follow Semantic Versioning. They should reflect the version the application is using.
 appVersion: 1.16.0
 dependencies:
-- name: kafka
-  version: "12.7.4"
-  repository: "https://charts.bitnami.com/bitnami"
 - name: redis
   version: "12.7.2"
   repository: "https://charts.bitnami.com/bitnami"
