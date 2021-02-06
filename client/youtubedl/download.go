@@ -64,7 +64,7 @@ func handleEndDownload(id string, filename string) error {
 		return err
 	}
 
-	err = redis.Client.Client.Do(context.Background(), radix.Cmd(nil, "SETEX", id, "1800", string(data)))
+	err = redis.Client.Client.Do(context.Background(), radix.Cmd(nil, "SETEX", id, "600", string(data)))
 
 	if err != nil {
 		return err
