@@ -8,4 +8,4 @@ player:
 redis:
     usePassword: false
     cluster:
-        slaveCount: 2
+        slaveCount: 1
