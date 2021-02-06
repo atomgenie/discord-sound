@@ -146,10 +146,18 @@ func addToQueue(sound string, guild *guilds.Type) {
 	guild.Mux.Unlock()
 }
 
-func convertSong(sound []byte) (*[][]byte, error) {
+func convertSongAsync(sound []byte, out chan []byte) {
 
-	buffer := make([][]int16, 0)
+	defer func(outchan chan []byte) {
+		outchan <- nil
+	}(out)
+
 	soundStream := bytes.NewReader(sound)
+	encoder, err := opus.NewEncoder(opusconfig.FrameRateConst, opusconfig.ChannelsConst, opus.AppAudio)
+
+	if err != nil {
+		return
+	}
 
 	for {
 		pcmBuf := make([]int16, opusconfig.FrameSizeConst*opusconfig.ChannelsConst)
@@ -160,34 +168,37 @@ func convertSong(sound []byte) (*[][]byte, error) {
 		}
 
 		if err != nil {
-			return nil, err
+			return
 		}
-
-		buffer = append(buffer, pcmBuf)
-	}
-
-	encoder, err := opus.NewEncoder(opusconfig.FrameRateConst, opusconfig.ChannelsConst, opus.AppAudio)
-
-	if err != nil {
-		return nil, err
-	}
-
-	opusFinalBuf := make([][]byte, 0)
-
-	for _, pcm := range buffer {
 
 		opusBuf := make([]byte, opusconfig.MaxBytesConst)
-		n, err := encoder.Encode(pcm, opusBuf)
+		n, err := encoder.Encode(pcmBuf, opusBuf)
 
 		if err != nil {
-			return nil, err
+			return
 		}
 
-		opusFinalBuf = append(opusFinalBuf, opusBuf[:n])
+		out <- opusBuf[:n]
+	}
+}
+
+func convertSong(sound []byte) *[][]byte {
+	opusFinalBuf := make([][]byte, 0)
+	outChan := make(chan []byte, 60*10)
+
+	go convertSongAsync(sound, outChan)
+
+	for {
+		data := <-outChan
+
+		if data == nil {
+			break
+		}
+
+		opusFinalBuf = append(opusFinalBuf, data)
 	}
 
-	return &opusFinalBuf, nil
-
+	return &opusFinalBuf
 }
 
 type preload struct {
@@ -198,9 +209,7 @@ type preload struct {
 }
 
 func loadSound(soundID string) (*[][]byte, error) {
-
 	var rawData []byte = nil
-
 	err := redis.Client.Client.Do(context.Background(), radix.Cmd(&rawData, "GET", soundID))
 
 	if err != nil {
@@ -211,13 +220,105 @@ func loadSound(soundID string) (*[][]byte, error) {
 		return nil, fmt.Errorf("Redis error")
 	}
 
-	return convertSong(rawData)
+	return convertSong(rawData), nil
+}
+
+func loadSoundAsync(soundID string, out chan []byte) {
+	var rawData []byte = nil
+	err := redis.Client.Client.Do(context.Background(), radix.Cmd(&rawData, "GET", soundID))
+
+	if err != nil || rawData == nil {
+		out <- nil
+		return
+	}
+
+	convertSongAsync(rawData, out)
+}
+
+func sendSound(s *discordgo.Session, guild *guilds.Type, data *[][]byte, voiceChannel *discordgo.VoiceConnection) {
+	for i, buff := range *data {
+
+		if i%60 == 0 {
+			select {
+			case <-guild.Skip:
+				return
+			case <-guild.PauseChan:
+				continueMusic := handlePauseMusic(s, &voiceChannel, guild)
+
+				if continueMusic {
+					break
+				} else {
+					return
+				}
+			default:
+				break
+
+			}
+		}
+
+		select {
+		case voiceChannel.OpusSend <- buff:
+			break
+		case <-time.After(5 * time.Second):
+			continueMusic := handlePauseMusic(s, &voiceChannel, guild)
+
+			if !continueMusic {
+				return
+			}
+		}
+	}
+}
+
+func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, voiceChannel *discordgo.VoiceConnection, soundID string) {
+	i := 0
+
+	outChan := make(chan []byte, 60*10)
+
+	go loadSoundAsync(soundID, outChan)
+
+	for {
+		i++
+
+		if i%60 == 0 {
+			select {
+			case <-guild.Skip:
+				return
+			case <-guild.PauseChan:
+				continueMusic := handlePauseMusic(s, &voiceChannel, guild)
+
+				if continueMusic {
+					break
+				} else {
+					return
+				}
+			default:
+				break
+			}
+		}
+
+		buff := <-outChan
+		if buff == nil {
+			break
+		}
+
+		select {
+		case voiceChannel.OpusSend <- buff:
+			break
+		case <-time.After(5 * time.Second):
+			continueMusic := handlePauseMusic(s, &voiceChannel, guild)
+
+			if !continueMusic {
+				return
+			}
+		}
+	}
 }
 
 func playSound(s *discordgo.Session, voiceChannel *discordgo.VoiceConnection, guildID string, channelID string, query guilds.QueueType, guild *guilds.Type, preload *preload) error {
 
 	var data *[][]byte = nil
 	var soundName string
+	var soundID string
 
 	preload.mux.Lock()
 	if preload.queryID == query.UUID {
@@ -227,22 +328,15 @@ func playSound(s *discordgo.Session, voiceChannel *discordgo.VoiceConnection, gu
 	preload.mux.Unlock()
 
 	if data == nil {
-		soundID, _soundName, err := getIDFromQuery(query.Query)
+		_soundID, _soundName, err := getIDFromQuery(query.Query)
 
 		if err != nil {
 			fmt.Println("Sound", err)
 			return err
 		}
 
-		_data, err := loadSound(soundID)
-
-		if err != nil {
-			fmt.Println("Sound", err)
-			return err
-		}
-
-		data = _data
 		soundName = _soundName
+		soundID = _soundID
 	}
 
 	guild.Mux.Lock()
@@ -258,36 +352,10 @@ func playSound(s *discordgo.Session, voiceChannel *discordgo.VoiceConnection, gu
 	voiceChannel.Speaking(true)
 	defer voiceChannel.Speaking(false)
 
-	for i, buff := range *data {
-
-		if i%60 == 0 {
-			select {
-			case <-guild.Skip:
-				return nil
-			case <-guild.PauseChan:
-				continueMusic := handlePauseMusic(s, &voiceChannel, guild)
-
-				if continueMusic {
-					break
-				} else {
-					return nil
-				}
-			default:
-				break
-
-			}
-		}
-
-		select {
-		case voiceChannel.OpusSend <- buff:
-			break
-		case <-time.After(5 * time.Second):
-			continueMusic := handlePauseMusic(s, &voiceChannel, guild)
-
-			if !continueMusic {
-				return nil
-			}
-		}
+	if data != nil {
+		sendSound(s, guild, data, voiceChannel)
+	} else {
+		sendSoundAsync(s, guild, voiceChannel, soundID)
 	}
 
 	fmt.Println("Done")
