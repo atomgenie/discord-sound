@@ -12,6 +12,7 @@ type QueueType struct {
 	UUID  string
 }
 
+// ResumePayload resume type
 type ResumePayload struct {
 	Message *discordgo.MessageCreate
 }
@@ -19,16 +20,17 @@ type ResumePayload struct {
 // Type Guild type
 type Type struct {
 	ID             string
-	Playing        bool
-	Pause          bool
-	Queue          []QueueType
+	playing        bool
+	pause          bool
+	queue          []QueueType
 	Mux            sync.Mutex
 	SoundChannelID string
 	Skip           chan int
 	PauseChan      chan int
 	ResumeChan     chan ResumePayload
 	StopChan       chan int
-	NowPlaying     string
+	nowPlaying     string
+	voiceChannel   *discordgo.VoiceConnection
 }
 
 // Map Guilds maps
@@ -41,9 +43,9 @@ var Mux sync.Mutex
 func New(guildID string) *Type {
 	guildInstance := new(Type)
 	guildInstance.ID = guildID
-	guildInstance.Playing = false
-	guildInstance.Pause = false
-	guildInstance.Queue = make([]QueueType, 0)
+	guildInstance.playing = false
+	guildInstance.pause = false
+	guildInstance.queue = make([]QueueType, 0)
 	guildInstance.Skip = make(chan int)
 	guildInstance.PauseChan = make(chan int)
 	guildInstance.ResumeChan = make(chan ResumePayload)
@@ -55,34 +57,101 @@ func New(guildID string) *Type {
 // GetPlaying get playing
 func (g *Type) GetPlaying() bool {
 	g.Mux.Lock()
-	loading := g.Playing
-	g.Mux.Unlock()
+	defer g.Mux.Unlock()
+	return g.playing
 
-	return loading
+}
+
+// SetPlaying set playing
+func (g *Type) SetPlaying(value bool) {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+
+	g.playing = value
 }
 
 // GetPause Get pause status
 func (g *Type) GetPause() bool {
 	g.Mux.Lock()
-	pause := g.Pause
-	g.Mux.Unlock()
-
-	return pause
+	defer g.Mux.Unlock()
+	return g.pause
 }
 
 // GetQueue Get queue
 func (g *Type) GetQueue() []QueueType {
 	g.Mux.Lock()
-	queue := g.Queue
-	g.Mux.Unlock()
+	defer g.Mux.Unlock()
+	queue := g.queue
 	return queue
 }
 
 // GetNowPlaying Get now playing
 func (g *Type) GetNowPlaying() string {
 	g.Mux.Lock()
-	nowPlaying := g.NowPlaying
+	nowPlaying := g.nowPlaying
 	g.Mux.Unlock()
 
 	return nowPlaying
+}
+
+// SetPause Set pause
+func (g *Type) SetPause(pause bool) {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+	g.pause = pause
+}
+
+// QueueAppend Append to queue
+func (g *Type) QueueAppend(element QueueType) {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+	g.queue = append(g.queue, element)
+}
+
+// QueuePopFront pop front element from queue and return it.
+// If empty, bool is set to true
+// frontElement, isEmpty
+func (g *Type) QueuePopFront() (QueueType, bool) {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+
+	if len(g.queue) == 0 {
+		return QueueType{}, true
+	}
+
+	firstElement := g.queue[0]
+	g.queue = g.queue[1:]
+
+	return firstElement, false
+}
+
+// QueueLen get queue length
+func (g *Type) QueueLen() int {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+
+	return len(g.queue)
+}
+
+// SetNowPlaying set nowPlaying
+func (g *Type) SetNowPlaying(nowPLaying string) {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+
+	g.nowPlaying = nowPLaying
+}
+
+// SetVoiceChannel Set voice channel
+func (g *Type) SetVoiceChannel(value *discordgo.VoiceConnection) {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+	g.voiceChannel = value
+}
+
+// GetVoiceChannel Get voice channel
+func (g *Type) GetVoiceChannel() *discordgo.VoiceConnection {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+
+	return g.voiceChannel
 }

@@ -9,7 +9,7 @@ import (
 
 // HandleResume command
 func HandleResume(g *guilds.Type, m *discordgo.MessageCreate) {
-	if !g.GetPlaying() || !g.GetPause() {
+	if !g.GetPause() {
 		return
 	}
 

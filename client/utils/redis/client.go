@@ -12,6 +12,7 @@ var Client ClientType = ClientType{}
 // ClientType Redis Client
 type ClientType struct {
 	Client radix.Client
+	addr   string
 }
 
 // Init Redis client
@@ -23,5 +24,6 @@ func Init(addr string) error {
 	}
 
 	Client.Client = client
+	Client.addr = addr
 	return nil
 }

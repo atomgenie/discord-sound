@@ -7,10 +7,7 @@ import (
 
 // HandleSkip skip command
 func HandleSkip(guild *guilds.Type) {
-
-	guild.Mux.Lock()
-	playing := guild.Playing
-	guild.Mux.Unlock()
+	playing := guild.GetPlaying()
 
 	if !playing {
 		return
