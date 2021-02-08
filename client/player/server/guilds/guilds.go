@@ -9,6 +9,8 @@ import (
 // QueueType queue type
 type QueueType struct {
 	Query string
+	Title string
+	ID    string
 	UUID  string
 }
 
@@ -123,6 +125,20 @@ func (g *Type) QueuePopFront() (QueueType, bool) {
 	g.queue = g.queue[1:]
 
 	return firstElement, false
+}
+
+// SetQueueTitle Set title of a element in queue
+func (g *Type) SetQueueTitle(query string, title string, ID string) {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+
+	for i, elm := range g.queue {
+		if elm.Query == query && elm.Title == "" {
+			g.queue[i].Title = title
+			g.queue[i].ID = ID
+			break
+		}
+	}
 }
 
 // QueueLen get queue length

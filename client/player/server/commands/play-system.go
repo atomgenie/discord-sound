@@ -124,8 +124,19 @@ func handlePreload(guild *guilds.Type, preload *preload, endChan chan int) {
 	}
 }
 
+func updateQueueTitle(query string, guild *guilds.Type) {
+	title, err := requests.RequestTitle(query)
+
+	if err != nil {
+		return
+	}
+
+	guild.SetQueueTitle(query, title.Title, title.ID)
+}
+
 func addToQueue(sound string, guild *guilds.Type) {
 	guild.QueueAppend(guilds.QueueType{Query: sound, UUID: uuid.Gen()})
+	go updateQueueTitle(sound, guild)
 }
 
 func convertSongAsync(sound []byte, out chan []byte) {

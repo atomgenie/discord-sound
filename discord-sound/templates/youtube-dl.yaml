@@ -24,3 +24,17 @@ spec:
                   value: youtubedl_done
                 - name: YOUTUBE_DL_TOPIC
                   value: youtubedl
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: youtube-dl
+spec:
+  selector:
+    name: youtube-dl
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000

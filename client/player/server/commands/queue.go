@@ -19,7 +19,17 @@ func HandleQueue(guild *guilds.Type, channelID string, s *discordgo.Session) {
 
 	for _, item := range queue {
 		messageContent.WriteString("- ")
-		messageContent.WriteString(item.Query)
+
+		if item.Title != "" {
+			messageContent.WriteString("[")
+			messageContent.WriteString(item.Title)
+			messageContent.WriteString("](https://www.youtube.com/watch?v=")
+			messageContent.WriteString(item.ID)
+			messageContent.WriteString(")")
+		} else {
+			messageContent.WriteString(item.Query)
+		}
+
 		messageContent.WriteRune('\n')
 	}
 

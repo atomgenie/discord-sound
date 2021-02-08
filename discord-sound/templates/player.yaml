@@ -26,3 +26,5 @@ spec:
                   value: youtubedl_done
                 - name: DISCORD_TOKEN
                   value: {{ required "DISCORD_TOKEN" .Values.DISCORD_TOKEN }}
+                - name: YOUTUBE_URL
+                  value: http://youtube-dl:9000

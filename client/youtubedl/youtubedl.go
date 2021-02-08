@@ -65,12 +65,7 @@ func Start() {
 	topicURL := os.Getenv("YOUTUBE_DL_TOPIC")
 	topicURLDone := os.Getenv("YOUTUBE_DL_DONE_TOPIC")
 
-	// sub, pubChan := radix.NewPubSubStubConn("tcp", redisURL, func(c context.Context, s []string) interface{} {
-	// 	fmt.Println(s)
-	// 	return nil
-	// })
-
-	// defer sub.Close()
+	go startServer(":9000")
 
 	fmt.Println("YoutubeSL Started")
 
