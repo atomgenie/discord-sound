@@ -6,6 +6,18 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// LoopEnum Loop enum
+type LoopEnum = int
+
+const (
+	// NoLoop Do not loop
+	NoLoop LoopEnum = iota
+	// LoopQueue Loop over the queue
+	LoopQueue
+	// LoopSound Loop over the sound
+	LoopSound
+)
+
 // QueueType queue type
 type QueueType struct {
 	Query string
@@ -32,6 +44,8 @@ type Type struct {
 	ResumeChan     chan ResumePayload
 	StopChan       chan int
 	nowPlaying     string
+	nowPlayingID   string
+	loop           LoopEnum
 	voiceChannel   *discordgo.VoiceConnection
 }
 
@@ -52,8 +66,17 @@ func New(guildID string) *Type {
 	guildInstance.PauseChan = make(chan int)
 	guildInstance.ResumeChan = make(chan ResumePayload)
 	guildInstance.StopChan = make(chan int)
+	guildInstance.loop = NoLoop
 
 	return guildInstance
+}
+
+// GetNowPlayingID Get now playing ID
+func (g *Type) GetNowPlayingID() string {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+
+	return g.nowPlayingID
 }
 
 // GetPlaying get playing
@@ -150,11 +173,12 @@ func (g *Type) QueueLen() int {
 }
 
 // SetNowPlaying set nowPlaying
-func (g *Type) SetNowPlaying(nowPLaying string) {
+func (g *Type) SetNowPlaying(nowPLaying string, ID string) {
 	g.Mux.Lock()
 	defer g.Mux.Unlock()
 
 	g.nowPlaying = nowPLaying
+	g.nowPlayingID = ID
 }
 
 // SetVoiceChannel Set voice channel
@@ -170,4 +194,19 @@ func (g *Type) GetVoiceChannel() *discordgo.VoiceConnection {
 	defer g.Mux.Unlock()
 
 	return g.voiceChannel
+}
+
+// GetLoop Get if guild should loop queue
+func (g *Type) GetLoop() LoopEnum {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+
+	return g.loop
+}
+
+// SetLoop Set loop
+func (g *Type) SetLoop(value LoopEnum) {
+	g.Mux.Lock()
+	defer g.Mux.Unlock()
+	g.loop = value
 }

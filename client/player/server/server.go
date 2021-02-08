@@ -59,6 +59,10 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 			commands.HandleResume(actualGuild, m)
 		} else if strings.HasPrefix(firstArgs, "queue") {
 			commands.HandleQueue(actualGuild, m.ChannelID, s)
+		} else if strings.HasPrefix(firstArgs, "loop") {
+			arg := firstArgs[5:]
+			commands.HandleLoop(s, actualGuild, arg)
+
 		} else {
 		}
 	}

@@ -34,9 +34,14 @@ func HandleQueue(guild *guilds.Type, channelID string, s *discordgo.Session) {
 	}
 
 	nowPlaying := guild.GetNowPlaying()
+	nowPlayingID := guild.GetNowPlayingID()
 
-	if nowPlaying == "" {
-		nowPlaying = "*Music is not being played*"
+	nowPlayingText := ""
+
+	if nowPlaying == "" || nowPlayingID == "" {
+		nowPlayingText = "*Music is not being played*"
+	} else {
+		nowPlayingText = "[" + nowPlaying + "](https://www.youtube.com/watch?v=" + nowPlayingID + ")"
 	}
 
 	var status string
@@ -49,6 +54,18 @@ func HandleQueue(guild *guilds.Type, channelID string, s *discordgo.Session) {
 		status = "*Inactive*"
 	}
 
+	var loopString string
+	loopStatus := guild.GetLoop()
+
+	switch loopStatus {
+	case guilds.NoLoop:
+		loopString = "*Not looping*"
+	case guilds.LoopQueue:
+		loopString = "*Looping queue*"
+	case guilds.LoopSound:
+		loopString = "*Looping music*"
+	}
+
 	s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
 		Embed: &discordgo.MessageEmbed{
 			Fields: []*discordgo.MessageEmbedField{
@@ -58,11 +75,15 @@ func HandleQueue(guild *guilds.Type, channelID string, s *discordgo.Session) {
 				},
 				{
 					Name:  "Now Playing",
-					Value: nowPlaying,
+					Value: nowPlayingText,
 				},
 				{
 					Name:  "Queue",
 					Value: messageContent.String(),
+				},
+				{
+					Name:  "Loop",
+					Value: loopString,
 				},
 			},
 			Color: 37394,

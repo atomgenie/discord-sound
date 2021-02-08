@@ -50,6 +50,10 @@ func startQueue(session *discordgo.Session, guild *guilds.Type) {
 		}
 
 		playSound(session, guild.ID, guild.SoundChannelID, querySound, guild, preload)
+
+		if guild.GetLoop() == guilds.LoopQueue {
+			guild.QueueAppend(querySound)
+		}
 	}
 
 	guild.GetVoiceChannel().Disconnect()
@@ -237,46 +241,50 @@ func loadSoundAsync(soundID string, queryID string, preload *preload, out chan [
 }
 
 func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, preload *preload, queryID string, soundID string) {
-	i := 0
-	outChan := make(chan []byte, 60*10)
-	voiceChannel := guild.GetVoiceChannel()
-	go loadSoundAsync(soundID, queryID, preload, outChan)
 
-	for {
-		i++
+	for guild.GetLoop() == guilds.LoopSound {
 
-		if i%60 == 0 {
+		i := 0
+		outChan := make(chan []byte, 60*10)
+		voiceChannel := guild.GetVoiceChannel()
+		go loadSoundAsync(soundID, queryID, preload, outChan)
+
+		for {
+			i++
+
+			if i%60 == 0 {
+				select {
+				case <-guild.Skip:
+					return
+				case <-guild.PauseChan:
+					continueMusic := handlePauseMusic(s, guild)
+					voiceChannel = guild.GetVoiceChannel()
+
+					if continueMusic {
+						break
+					} else {
+						return
+					}
+				default:
+					break
+				}
+			}
+
+			buff := <-outChan
+			if buff == nil {
+				break
+			}
+
 			select {
-			case <-guild.Skip:
-				return
-			case <-guild.PauseChan:
+			case voiceChannel.OpusSend <- buff:
+				break
+			case <-time.After(5 * time.Second):
 				continueMusic := handlePauseMusic(s, guild)
 				voiceChannel = guild.GetVoiceChannel()
 
-				if continueMusic {
-					break
-				} else {
+				if !continueMusic {
 					return
 				}
-			default:
-				break
-			}
-		}
-
-		buff := <-outChan
-		if buff == nil {
-			break
-		}
-
-		select {
-		case voiceChannel.OpusSend <- buff:
-			break
-		case <-time.After(5 * time.Second):
-			continueMusic := handlePauseMusic(s, guild)
-			voiceChannel = guild.GetVoiceChannel()
-
-			if !continueMusic {
-				return
 			}
 		}
 	}
@@ -307,8 +315,8 @@ func playSound(s *discordgo.Session, guildID string, channelID string, query gui
 		soundID = _soundID
 	}
 
-	guild.SetNowPlaying(soundName)
-	defer guild.SetNowPlaying("")
+	guild.SetNowPlaying(soundName, soundID)
+	defer guild.SetNowPlaying("", "")
 
 	guild.GetVoiceChannel().Speaking(true)
 	defer guild.GetVoiceChannel().Speaking(false)
