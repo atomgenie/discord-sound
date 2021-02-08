@@ -66,7 +66,7 @@ func HandleQueue(guild *guilds.Type, channelID string, s *discordgo.Session) {
 				},
 			},
 			Color: 37394,
-			Title: "Queue",
+			Title: "HxV",
 		},
 	})
 }

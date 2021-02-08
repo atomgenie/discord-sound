@@ -78,7 +78,7 @@ func getIDFromQuery(query string) (string, string, error) {
 	case key := <-instance.DoneChan:
 		soundKey = key.YoutubeID
 		titleKey = key.YoutubeTitle
-	case <-time.After(30 * time.Second):
+	case <-time.After(60 * time.Second):
 		fmt.Println("Request Timeout", requestID)
 		requests.CancelRequest(requestID)
 		return "", "", fmt.Errorf("Timeout")
