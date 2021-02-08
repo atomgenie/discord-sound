@@ -256,7 +256,7 @@ func loadSoundAsync(soundID string, queryID string, preload *preload, out chan [
 func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, preload *preload, queryID string, soundID string) {
 
 	// If loop over music is activated
-	for guild.GetLoop() == guilds.LoopSound {
+	for {
 
 		i := 0
 		outChan := make(chan []byte, 60*10)
@@ -310,6 +310,10 @@ func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, preload *preload, 
 					return
 				}
 			}
+		}
+
+		if guild.GetLoop() != guilds.LoopSound {
+			break
 		}
 	}
 }
