@@ -109,7 +109,7 @@ func handlePreload(guild *guilds.Type, preload *preload, endChan chan int) {
 				soundID, soundName, err := getIDFromQuery(query.Query)
 
 				if err == nil {
-					data, err := loadSound(soundID)
+					data, err := preloadSound(soundID)
 
 					if err == nil {
 						preload.mux.Lock()
@@ -197,12 +197,12 @@ func convertSong(sound []byte) *[][]byte {
 type preload struct {
 	queryID string
 	title   string
-	payload *[][]byte
+	payload *[]byte
 	mux     sync.Mutex
 }
 
-func loadSound(soundID string) (*[][]byte, error) {
-	var rawData []byte = nil
+func preloadSound(soundID string) (*[]byte, error) {
+	var rawData []byte = make([]byte, 0)
 	err := redis.Client.Client.Do(context.Background(), radix.Cmd(&rawData, "GET", soundID))
 
 	if err != nil {
@@ -213,68 +213,34 @@ func loadSound(soundID string) (*[][]byte, error) {
 		return nil, fmt.Errorf("Redis error")
 	}
 
-	return convertSong(rawData), nil
+	return &rawData, nil
 }
 
-func loadSoundAsync(soundID string, out chan []byte) {
+func loadSoundAsync(soundID string, queryID string, preload *preload, out chan []byte) {
 	var rawData []byte = nil
-	err := redis.Client.Client.Do(context.Background(), radix.Cmd(&rawData, "GET", soundID))
 
-	if err != nil || rawData == nil {
-		out <- nil
-		return
+	preload.mux.Lock()
+	preloadID := preload.queryID
+	preload.mux.Unlock()
+
+	if preloadID == queryID {
+		rawData = *preload.payload
+	} else {
+		err := redis.Client.Client.Do(context.Background(), radix.Cmd(&rawData, "GET", soundID))
+		if err != nil || rawData == nil {
+			out <- nil
+			return
+		}
 	}
 
 	convertSongAsync(rawData, out)
 }
 
-func sendSound(s *discordgo.Session, guild *guilds.Type, data *[][]byte) {
-
-	voiceChannel := guild.GetVoiceChannel()
-
-	for i, buff := range *data {
-
-		if i%60 == 0 {
-			select {
-			case <-guild.Skip:
-				return
-			case <-guild.PauseChan:
-				continueMusic := handlePauseMusic(s, guild)
-				voiceChannel = guild.GetVoiceChannel()
-
-				if continueMusic {
-					break
-				} else {
-					return
-				}
-			default:
-				break
-
-			}
-		}
-
-		select {
-		case voiceChannel.OpusSend <- buff:
-			break
-		case <-time.After(5 * time.Second):
-			continueMusic := handlePauseMusic(s, guild)
-			voiceChannel = guild.GetVoiceChannel()
-
-			if !continueMusic {
-				return
-			}
-		}
-	}
-}
-
-func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, soundID string) {
+func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, preload *preload, queryID string, soundID string) {
 	i := 0
-
 	outChan := make(chan []byte, 60*10)
-
 	voiceChannel := guild.GetVoiceChannel()
-
-	go loadSoundAsync(soundID, outChan)
+	go loadSoundAsync(soundID, queryID, preload, outChan)
 
 	for {
 		i++
@@ -318,18 +284,18 @@ func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, soundID string) {
 
 func playSound(s *discordgo.Session, guildID string, channelID string, query guilds.QueueType, guild *guilds.Type, preload *preload) error {
 
-	var data *[][]byte = nil
 	var soundName string
 	var soundID string
+	isPreload := false
 
 	preload.mux.Lock()
 	if preload.queryID == query.UUID {
-		data = preload.payload
 		soundName = preload.title
+		isPreload = true
 	}
 	preload.mux.Unlock()
 
-	if data == nil {
+	if !isPreload {
 		_soundID, _soundName, err := getIDFromQuery(query.Query)
 
 		if err != nil {
@@ -347,11 +313,7 @@ func playSound(s *discordgo.Session, guildID string, channelID string, query gui
 	guild.GetVoiceChannel().Speaking(true)
 	defer guild.GetVoiceChannel().Speaking(false)
 
-	if data != nil {
-		sendSound(s, guild, data)
-	} else {
-		sendSoundAsync(s, guild, soundID)
-	}
+	sendSoundAsync(s, guild, preload, query.UUID, soundID)
 
 	fmt.Println("Done")
 
