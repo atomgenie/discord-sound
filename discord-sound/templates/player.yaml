@@ -25,6 +25,9 @@ spec:
                 - name: YOUTUBE_DL_DONE_TOPIC
                   value: youtubedl_done
                 - name: DISCORD_TOKEN
-                  value: {{ required "DISCORD_TOKEN" .Values.DISCORD_TOKEN }}
+                  valueFrom:
+                    secretKeyRef:
+                      name: discord-token
+                      key: value
                 - name: YOUTUBE_URL
                   value: http://youtube-dl.default.svc.cluster.local:9000
