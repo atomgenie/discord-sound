@@ -4,6 +4,9 @@ import (
 	"discord-sound/player/server/commands"
 	"discord-sound/player/server/guilds"
 	"fmt"
+	"os"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -70,6 +73,14 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 
 			commands.HandleLoop(s, actualGuild, arg)
+		} else if firstArgs == "pprof" {
+			f, err := os.OpenFile("pprof.out", os.O_CREATE|os.O_RDWR, 0644)
+			if err == nil {
+				pprof.WriteHeapProfile(f)
+				f.Close()
+			}
+		} else if firstArgs == "gc" {
+			runtime.GC()
 		} else {
 		}
 	}

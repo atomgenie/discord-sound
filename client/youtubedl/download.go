@@ -101,7 +101,7 @@ func download(query string) (string, string, error) {
 
 	filename := id + ".opus"
 
-	r := exec.Command("./youtube-dl", "--format", "best", "--extract-audio", "--audio-quality", "0", "--audio-format", "opus", "-o", filename, id)
+	r := exec.Command("./youtube-dl", "--format", "best", "--extract-audio", "--audio-quality", "5", "--audio-format", "opus", "-o", filename, id)
 	err = r.Run()
 
 	if err != nil {
