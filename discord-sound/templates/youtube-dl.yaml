@@ -19,7 +19,7 @@ spec:
               image: {{ .Values.youtubedl.image }}
               env:
                 - name: REDIS_URL
-                  value: {{ .Release.Name }}-redis-master:6379
+                  value: {{ .Release.Name }}-redis-master.default.svc.cluster.local:6379
                 - name: YOUTUBE_DL_DONE_TOPIC
                   value: youtubedl_done
                 - name: YOUTUBE_DL_TOPIC

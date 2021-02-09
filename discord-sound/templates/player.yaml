@@ -19,7 +19,7 @@ spec:
               image: {{ .Values.player.image }}
               env:
                 - name: REDIS_URL
-                  value: {{ .Release.Name }}-redis-master:6379
+                  value: {{ .Release.Name }}-redis-master.default.svc.cluster.local:6379
                 - name: YOUTUBE_DL_TOPIC
                   value: youtubedl
                 - name: YOUTUBE_DL_DONE_TOPIC
@@ -27,4 +27,4 @@ spec:
                 - name: DISCORD_TOKEN
                   value: {{ required "DISCORD_TOKEN" .Values.DISCORD_TOKEN }}
                 - name: YOUTUBE_URL
-                  value: http://youtube-dl:9000
+                  value: http://youtube-dl.default.svc.cluster.local:9000
