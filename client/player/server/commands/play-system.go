@@ -355,6 +355,7 @@ func playSound(s *discordgo.Session, guildID string, channelID string, query gui
 	preload.mux.Lock()
 	if preload.queryID == query.UUID {
 		soundName = preload.title
+		soundID = query.ID
 		isPreload = true
 	}
 	preload.mux.Unlock()
