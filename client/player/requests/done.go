@@ -39,7 +39,9 @@ func handleDone(ID string, youtubeID string, youtubeTitle string) {
 		break
 	}
 
-	requestMap[ID] = request{}
+	requestMux.Lock()
+	delete(requestMap, ID)
+	requestMux.Unlock()
 }
 
 func handleDoneRequests() {

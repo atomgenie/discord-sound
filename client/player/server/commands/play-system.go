@@ -38,12 +38,14 @@ func startQueue(session *discordgo.Session, guild *guilds.Type) {
 	}
 
 	guild.SetVoiceChannel(voiceChannel)
+	defer guild.SetVoiceChannel(nil)
 
 	// Preload system initialisation
 	preload := new(preload)
 	preloadEnd := make(chan int)
 
 	go handlePreload(guild, preload, preloadEnd)
+	defer closePreload(guild, preload, preloadEnd)
 
 	// Loop over musics in queue
 	for {
@@ -58,13 +60,15 @@ func startQueue(session *discordgo.Session, guild *guilds.Type) {
 		// If looping over queue is activated, push the played sound in queue at the end
 		if guild.GetLoop() == guilds.LoopQueue {
 			guild.QueueAppend(querySound)
+
+			if querySound.Title == "" {
+				updateQueueTitle(querySound.Query, guild)
+			}
 		}
 	}
 
 	guild.GetVoiceChannel().Disconnect()
 
-	// Stop preload system
-	preloadEnd <- 1
 	fmt.Println("End queue")
 
 	return
@@ -107,7 +111,7 @@ func getIDFromQuery(query string) (string, string, error) {
 
 // Preload system
 // Will try to get music data for the next sound in queue
-func handlePreload(guild *guilds.Type, preload *preload, endChan chan int) {
+func handlePreload(guild *guilds.Type, preload *preload, endChan <-chan int) {
 	for {
 		select {
 		// Check if we should stop the preload system
@@ -149,6 +153,13 @@ func handlePreload(guild *guilds.Type, preload *preload, endChan chan int) {
 	}
 }
 
+func closePreload(guild *guilds.Type, preload *preload, preloadEnd chan<- int) {
+	preloadEnd <- 1
+	preload.mux.Lock()
+	defer preload.mux.Unlock()
+	preload.payload = nil
+}
+
 // Set the Youtube Title of a query in the queue
 func updateQueueTitle(query string, guild *guilds.Type) {
 	title, err := requests.RequestTitle(query)
@@ -166,11 +177,11 @@ func addToQueue(sound string, guild *guilds.Type) {
 }
 
 // Async convert the song to Discord compatible format (opus)
-func convertSongAsync(sound []byte, out chan []byte) {
+func convertSongAsync(sound []byte, out chan<- []byte, stop <-chan int) {
 
 	// Send nil to channel at the end of music
-	defer func(outchan chan []byte) {
-		outchan <- nil
+	defer func(outchan chan<- []byte) {
+		close(outchan)
 	}(out)
 
 	soundStream := bytes.NewReader(sound)
@@ -202,7 +213,12 @@ func convertSongAsync(sound []byte, out chan []byte) {
 			return
 		}
 
-		out <- opusBuf[:n]
+		select {
+		case out <- opusBuf[:n]:
+			break
+		case <-stop:
+			return
+		}
 	}
 }
 
@@ -231,7 +247,7 @@ func preloadSound(soundID string) (*[]byte, error) {
 	return &rawData, nil
 }
 
-func loadSoundAsync(soundID string, queryID string, preload *preload, out chan []byte) {
+func loadSoundAsync(soundID string, queryID string, preload *preload, out chan<- []byte, stop <-chan int) {
 	var rawData []byte = nil
 
 	preload.mux.Lock()
@@ -244,16 +260,28 @@ func loadSoundAsync(soundID string, queryID string, preload *preload, out chan [
 	} else {
 		err := redis.Client.Client.Do(context.Background(), radix.Cmd(&rawData, "GET", soundID))
 		if err != nil || rawData == nil {
-			out <- nil
+			close(out)
 			return
 		}
 	}
 
-	convertSongAsync(rawData, out)
+	convertSongAsync(rawData, out, stop)
 }
 
 // Send sound to discord channel
 func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, preload *preload, queryID string, soundID string) {
+
+	stopChan := make(chan int)
+	defer func(stop chan<- int) {
+		for {
+			select {
+			case stop <- 1:
+				break
+			default:
+				return
+			}
+		}
+	}(stopChan)
 
 	// If loop over music is activated
 	for {
@@ -265,7 +293,7 @@ func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, preload *preload, 
 		voiceChannel := guild.GetVoiceChannel()
 
 		// Load sound from Redis, convert it and put result in outChan
-		go loadSoundAsync(soundID, queryID, preload, outChan)
+		go loadSoundAsync(soundID, queryID, preload, outChan, stopChan)
 
 		for {
 			i++
@@ -289,10 +317,10 @@ func sendSoundAsync(s *discordgo.Session, guild *guilds.Type, preload *preload, 
 				}
 			}
 
-			buff := <-outChan
+			buff, open := <-outChan
 
 			// If it is the end of the music
-			if buff == nil {
+			if !open {
 				break
 			}
 
